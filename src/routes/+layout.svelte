@@ -5,7 +5,13 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
+	<link rel="icon" href="/FlushFinder.png" />
 </svelte:head>
 
 {@render children?.()}
+
+<style>
+	* {
+		font-family: 'Ubuntu';
+	}
+</style>

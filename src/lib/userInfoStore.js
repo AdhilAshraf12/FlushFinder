@@ -1,9 +1,11 @@
 // src/lib/userInfo.js
+import { browser } from '$app/environment';
 
 const STORAGE_KEY = 'userInfo';
 
 // Load from sessionStorage or default
 function load() {
+	if (!browser) return '';
 	const json = sessionStorage.getItem(STORAGE_KEY);
 	return json
 		? JSON.parse(json)
