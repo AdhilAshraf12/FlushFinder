@@ -3,14 +3,16 @@
 	import heart from '$lib/assets/Heart.png';
     import heart2 from '$lib/assets/Heart2.png';
     import { userInfo } from '$lib/userInfoStore.js';
+	import { stopPropagation } from 'svelte/legacy';
 
-    
+    let show = false;
     let like=false;
 
     // Check if the user is logged in first
     function toggleheart(){
         if (userInfo.getEmail() == 'test@mail.com') {
 			like=false;
+            show=true;
 		}else{
             like=!like;
         }
@@ -21,6 +23,14 @@
     }
 
 </script>
+
+{#if show}
+        <div class="popup-bg">
+            <div class="popup">Sign up First!
+                <button class="close" onclick={() => show=false}>Close</button>
+            </div>
+        </div>
+{/if}
 
 <div>
     <div class="headdiv">
@@ -52,6 +62,41 @@
 </div>
 
 <style>
+    .popup{
+        background: white;
+        opacity: 100%;
+        border-radius: 12px;
+        display:flex;
+        flex-direction: column;
+        height: 120px;
+        width: 220px;
+        justify-content: center;
+        align-items: center;
+        justify-content: space-around;
+        font-size: 20px;
+        font-family: 'Roboto', sans-serif;
+    }
+
+   .popup-bg{
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+   }
+    .close{
+        background-color: #4F378B;
+		height: 29px;
+		width: 68px;
+		color: white;
+		border-radius: 100px;
+        border:none;
+    }
     .revwrapper{
         display: flex;
         flex-direction: column;
@@ -66,6 +111,7 @@
         /* border:2px solid purple; */
         border-radius: 8px;
         padding-left: 10px;
+        margin-bottom: 10px;
     }
 
     .headdiv{
