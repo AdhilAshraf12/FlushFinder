@@ -1,6 +1,8 @@
 <script>
 	import { userInfo } from '$lib/userInfoStore';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { browser } from '$app/environment';
 
 	const availabilityOptions = ['Open now', 'Busy but open', 'Closed for cleaning'];
 	const conditionOptions = ['Sparkling clean', 'Usable', 'Needs attention'];
@@ -50,7 +52,18 @@
 		}
 	];
 
-	let reviews = $state(seedReviews);
+	// Reviews stored per-location keyed by location name. Seed the example location.
+	let reviewsByLocation = $state({ 'Deville Coffee Washroom': seedReviews });
+	// load persisted reviews if available
+	if (browser) {
+		try {
+			const raw = sessionStorage.getItem('reviewsByLocation');
+			if (raw) reviewsByLocation = JSON.parse(raw);
+		} catch (e) {
+			// ignore parse errors
+		}
+	}
+	let currentReviews = $state([]);
 	let rating = $state(0);
 	let title = $state('');
 	let review = $state('');
@@ -61,11 +74,43 @@
 	let currentAuthor = $derived(userInfo?.getUsername ? userInfo.getUsername() : 'You');
 	let editingId = $state(null);
 
+	let locationName = $state('Selected location');
+	let locationLink = $state('/inapp/find');
+
 	$effect(() => {
-		if (userInfo?.getEmail && userInfo.getEmail() == '') {
-			goto('/');
+		const n = $page.url.searchParams.get('name');
+		const l = $page.url.searchParams.get('link');
+		locationName = n ?? 'Selected location';
+		locationLink = l ?? '/inapp/find';
+	});
+
+	
+	$effect(() => {
+		currentReviews = reviewsByLocation[locationName] ?? [];
+	});
+
+	
+	$effect(() => {
+		if (!browser) return;
+		try {
+			sessionStorage.setItem('reviewsByLocation', JSON.stringify(reviewsByLocation));
+		} catch (e) {
+			
 		}
 	});
+
+function scrollToReviews() {
+    if (!browser) return;
+    const el = document.getElementById('reviews-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+function isGuest() {
+	const e = userInfo.getEmail();
+	return !e || e === 'test@mail.com';
+}
+
+	
 
 	function toggleAccess(option) {
 		if (accessibility.includes(option)) {
@@ -89,8 +134,11 @@
 			return;
 		}
 
+		// Ensure an array exists for this location
+		const list = reviewsByLocation[locationName] ?? [];
+
 		if (editingId) {
-			reviews = reviews.map((item) =>
+			reviewsByLocation[locationName] = list.map((item) =>
 				item.id === editingId
 					? {
 							...item,
@@ -113,7 +161,7 @@
 				status: { availability, condition, accessibility }
 			};
 
-			reviews = [newReview, ...reviews].slice(0, 6);
+			reviewsByLocation[locationName] = [newReview, ...list].slice(0, 20);
 			helperMessage = 'Thanks for sharing. Your review is live.';
 		}
 
@@ -127,7 +175,8 @@
 	}
 
 	function deleteReview(id) {
-		reviews = reviews.filter((review) => review.id !== id);
+		const list = reviewsByLocation[locationName] ?? [];
+		reviewsByLocation[locationName] = list.filter((review) => review.id !== id);
 		helperMessage = 'Your review was deleted.';
 	}
 
@@ -166,6 +215,10 @@
 			<p class="eyebrow">Share your experience</p>
 			<h1>Rate this bathroom</h1>
 			<p class="lede">Leave a fast status check, pick a rating, and add a short headline.</p>
+		</div>
+		<div class="location-row">
+			<h2 class="location-name">{locationName}</h2>
+			<button class="go" type="button" onclick={() => goto(locationLink)}>GO</button>
 		</div>
 		<div class="pill">Recent reviews</div>
 	</header>
@@ -245,59 +298,68 @@
 					</div>
 				</div>
 
-				<div class="stars" aria-label="Star rating from one to five">
-					{#each [1, 2, 3, 4, 5] as star}
-						<button
-							type="button"
-							class:selected={rating >= star}
-							aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
-							onclick={() => {
-								rating = star;
-								helperMessage = '';
-							}}
-						>
-							{STAR_FILLED}
-						</button>
-					{/each}
-					<span class="rating-label">{rating > 0 ? `${rating}/5` : 'Tap a star'}</span>
-				</div>
-
-				<label class="input-group">
-					<span>Title</span>
-					<input
-						name="title"
-						placeholder="Example: Clean and well-lit"
-						bind:value={title}
-						oninput={() => (helperMessage = '')}
-					/>
-				</label>
-
-				<label class="input-group">
-					<span>Review</span>
-					<textarea
-						name="review"
-						rows="4"
-						placeholder="Keep it short: what stood out, how busy it was, any tips."
-						bind:value={review}
-						oninput={() => (helperMessage = '')}
-					></textarea>
-				</label>
-
-				{#if helperMessage}
-					<p class="helper">{helperMessage}</p>
-				{/if}
-
-				<div class="actions">
-					<button class="submit" type="button" onclick={submitReview}>
-						{editingId ? 'Update review' : 'Submit review'}
+			<div class="stars" aria-label="Star rating from one to five">
+				{#each [1, 2, 3, 4, 5] as star}
+					<button
+						type="button"
+						class:selected={rating >= star}
+						aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+						onclick={() => {
+							rating = star;
+							helperMessage = '';
+						}}
+					>
+						{STAR_FILLED}
 					</button>
-					{#if editingId}
-						<button class="ghost" type="button" onclick={cancelEdit}>Cancel</button>
-					{/if}
-				</div>
-			</section>
+				{/each}
+				<span class="rating-label">{rating > 0 ? `${rating}/5` : 'Tap a star'}</span>
+			</div>
+
+			<label class="input-group">
+				<span>Title</span>
+				<input
+					name="title"
+					placeholder="Example: Clean and well-lit"
+					bind:value={title}
+					oninput={() => (helperMessage = '')}
+				/>
+			</label>
+
+			<label class="input-group">
+				<span>Review</span>
+				<textarea
+					name="review"
+					rows="4"
+					placeholder="Keep it short: what stood out, how busy it was, any tips."
+					bind:value={review}
+					oninput={() => (helperMessage = '')}
+				></textarea>
+			</label>
+
+			{#if helperMessage}
+				<p class="helper">{helperMessage}</p>
+			{/if}
+
+			<div class="actions">
+				<button class="submit" type="button" onclick={submitReview} disabled={isGuest()}>
+					{editingId ? 'Update review' : 'Submit review'}
+				</button>
+				{#if editingId}
+					<button class="ghost" type="button" onclick={cancelEdit}>Cancel</button>
+				{/if}
+			</div>
+		</section>
+		{:else}
+		<section class="card guest-banner">
+			<p>You are continuing as a guest. Guests cannot post reviews.</p>
+			<div class="guest-actions">
+				<button type="button" class="ghost" onclick={scrollToReviews}>Continue reading</button>
+				<button type="button" class="submit" onclick={() => goto('/')}>Log in to post</button>
+			</div>
+		</section>
 		{/if}
-		<section class="card reviews">
+
+		<section id="reviews-section" class="card reviews">
 			<div class="section-head">
 				<div>
 					<p class="eyebrow">Feed</p>
@@ -305,10 +367,10 @@
 				</div>
 			</div>
 
-			{#if reviews.length === 0}
+			{#if currentReviews.length === 0}
 				<p class="hint">No reviews yet. Be the first to share your experience.</p>
 			{:else}
-				{#each reviews as item (item.id)}
+				{#each currentReviews as item (item.id)}
 					<article class="review">
 						<header>
 							<div>
@@ -359,7 +421,7 @@
 		</section>
 	</div>
 
-	{#if userInfo.getEmail() === 'test@mail.com'}
+	{#if isGuest()}
 		<div class="auth-note">
 			<h3>You need to be signed in to post a review.</h3>
 			<div class="links">
