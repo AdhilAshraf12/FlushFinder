@@ -1,5 +1,6 @@
 <script>
 	import { userInfo } from '$lib/userInfoStore';
+	import { goto } from '$app/navigation';
 
 	const availabilityOptions = ['Open now', 'Busy but open', 'Closed for cleaning'];
 	const conditionOptions = ['Sparkling clean', 'Usable', 'Needs attention'];
@@ -9,6 +10,7 @@
 
 	const seedReviews = [
 		{
+			id: 1,
 			title: 'Clean and bright',
 			body: 'Easy to find and spotless. Soap and paper towels were stocked.',
 			rating: 5,
@@ -21,6 +23,7 @@
 			}
 		},
 		{
+			id: 2,
 			title: 'Lineup at lunch',
 			body: 'Only two stalls so it backs up around noon, but still usable.',
 			rating: 3,
@@ -33,6 +36,7 @@
 			}
 		},
 		{
+			id: 3,
 			title: 'Closed earlier',
 			body: 'Cleaning sign was up around 8pm. Come back later.',
 			rating: 2,
@@ -54,17 +58,13 @@
 	let condition = $state(conditionOptions[0]);
 	let accessibility = $state(accessibilityOptions[0]);
 	let helperMessage = $state('');
+	const currentAuthor = userInfo.getUsername() || 'You';
 
 	$effect(() => {
 		if (userInfo.getEmail() == '') {
-			location.href = '/';
+			goto('/');
 		}
 	});
-
-	function selectValue(setter, value) {
-		setter(value);
-		helperMessage = '';
-	}
 
 	function submitReview() {
 		if (!title.trim() || !review.trim() || rating === 0) {
@@ -73,6 +73,7 @@
 		}
 
 		const newReview = {
+			id: Date.now(), // Simple unique ID
 			title: title.trim(),
 			body: review.trim(),
 			rating,
@@ -86,6 +87,15 @@
 		review = '';
 		rating = 0;
 		helperMessage = 'Thanks for sharing. Your review is live.';
+	}
+
+	function deleteReview(id) {
+		reviews = reviews.filter((review) => review.id !== id);
+		helperMessage = 'Your review was deleted.';
+	}
+
+	function isOwnReview(item) {
+		return item.author === currentAuthor;
 	}
 </script>
 
@@ -113,7 +123,10 @@
 					<button
 						type="button"
 						class:selected={availability === option}
-						onclick={() => selectValue((value) => (availability = value), option)}
+						onclick={() => {
+							availability = option;
+							helperMessage = '';
+						}}
 					>
 						{option}
 					</button>
@@ -132,7 +145,10 @@
 					<button
 						type="button"
 						class:selected={condition === option}
-						onclick={() => selectValue((value) => (condition = value), option)}
+						onclick={() => {
+							condition = option;
+							helperMessage = '';
+						}}
 					>
 						{option}
 					</button>
@@ -151,7 +167,10 @@
 					<button
 						type="button"
 						class:selected={accessibility === option}
-						onclick={() => selectValue((value) => (accessibility = value), option)}
+						onclick={() => {
+							accessibility = option;
+							helperMessage = '';
+						}}
 					>
 						{option}
 					</button>
@@ -175,7 +194,10 @@
 						type="button"
 						class:selected={rating >= star}
 						aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
-						onclick={() => selectValue((value) => (rating = value), star)}
+						onclick={() => {
+							rating = star;
+							helperMessage = '';
+						}}
 					>
 						{STAR_FILLED}
 					</button>
@@ -189,8 +211,8 @@
 				<input
 					name="title"
 					placeholder="Example: Clean and well-lit"
-					value={title}
-					oninput={(event) => (title = event.currentTarget.value)}
+					bind:value={title}
+					oninput={() => (helperMessage = '')}
 				/>
 			</label>
 
@@ -200,8 +222,8 @@
 					name="review"
 					rows="4"
 					placeholder="Keep it short: what stood out, how busy it was, any tips."
-					value={review}
-					oninput={(event) => (review = event.currentTarget.value)}
+					bind:value={review}
+					oninput={() => (helperMessage = '')}
 				/>
 			</label>
 
@@ -223,7 +245,7 @@
 			{#if reviews.length === 0}
 				<p class="hint">No reviews yet. Be the first to share your experience.</p>
 			{:else}
-				{#each reviews as item, index (item.title + index)}
+				{#each reviews as item (item.id)}
 					<article class="review">
 						<header>
 							<div>
@@ -235,6 +257,16 @@
 									{STAR_FILLED.repeat(item.rating)}{STAR_EMPTY.repeat(5 - item.rating)}
 								</span>
 								<span class="rating-number">{item.rating}/5</span>
+								{#if isOwnReview(item)}
+									<button
+										type="button"
+										class="delete"
+										aria-label="Delete your review"
+										onclick={() => deleteReview(item.id)}
+									>
+										Delete
+									</button>
+								{/if}
 							</div>
 						</header>
 						<p class="body">{item.body}</p>
@@ -249,7 +281,7 @@
 		</section>
 	</div>
 
-	{#if userInfo.getEmail() === 'test@mail.com'}
+	{#if !userInfo.getEmail()}
 		<div class="auth-note">
 			<h3>You need to be signed in to post a review.</h3>
 			<div class="links">
