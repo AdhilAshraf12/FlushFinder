@@ -2,6 +2,8 @@
 
 Deployed at [https://481-group-1-flushfinder.pages.dev/](https://481-group-1-flushfinder.pages.dev/)
 
+This was desinged for mobile first, we have not implemented a desktop version
+
 To start
 
 ```bash
