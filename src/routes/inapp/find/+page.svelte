@@ -44,9 +44,11 @@
 	let panX = $state(0);
 	let panY = $state(0);
 
+	import { isGuest } from '$lib/userInfoStore';
+
 	$effect(() => {
-		if (userInfo.getEmail() === '') {
-			location.href = '/';
+		if (isGuest()) {
+			// If you previously redirected guests, we no longer redirect; keep viewing allowed
 		}
 	});
 

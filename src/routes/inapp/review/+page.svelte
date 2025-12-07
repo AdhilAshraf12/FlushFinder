@@ -99,11 +99,18 @@
 		}
 	});
 
-	$effect(() => {
-        if (userInfo?.getEmail && userInfo.getEmail() == '') {
-            goto('/');
-        }
-    });
+function scrollToReviews() {
+    if (!browser) return;
+    const el = document.getElementById('reviews-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+function isGuest() {
+	const e = userInfo.getEmail();
+	return !e || e === 'test@mail.com';
+}
+
+	// Do not redirect guests — allow viewing reviews but prevent posting.
 
 	function toggleAccess(option) {
     if (accessibility.includes(option)) {
@@ -117,6 +124,11 @@
 	}
 
 	function submitReview() {
+		// prevent guests from submitting
+		if (userInfo.getEmail() === '') {
+			helperMessage = 'You must be signed in to post a review.';
+			return;
+		}
 		if (!title.trim() || !review.trim() || rating === 0) {
 			helperMessage = 'Add a title, rating, and a short note before submitting.';
 			return;
@@ -277,6 +289,7 @@
 			</div>
 		</section>
 
+		{#if userInfo.getEmail() !== ''}
 		<section class="card">
 			<div class="section-head">
 				<div>
@@ -286,7 +299,6 @@
 				</div>
 			</div>
 
-			
 			<div class="stars" aria-label="Star rating from one to five">
 				{#each [1, 2, 3, 4, 5] as star}
 					<button
@@ -303,7 +315,6 @@
 				{/each}
 				<span class="rating-label">{rating > 0 ? `${rating}/5` : 'Tap a star'}</span>
 			</div>
-
 
 			<label class="input-group">
 				<span>Title</span>
@@ -331,7 +342,7 @@
 			{/if}
 
 			<div class="actions">
-				<button class="submit" type="button" onclick={submitReview}>
+				<button class="submit" type="button" onclick={submitReview} disabled={isGuest()}>
 					{editingId ? 'Update review' : 'Submit review'}
 				</button>
 				{#if editingId}
@@ -339,8 +350,17 @@
 				{/if}
 			</div>
 		</section>
+		{:else}
+		<section class="card guest-banner">
+			<p>You are continuing as a guest. Guests cannot post reviews.</p>
+			<div class="guest-actions">
+				<button type="button" class="ghost" onclick={scrollToReviews}>Continue reading</button>
+				<button type="button" class="submit" onclick={() => goto('/')}>Log in to post</button>
+			</div>
+		</section>
+		{/if}
 
-		<section class="card reviews">
+		<section id="reviews-section" class="card reviews">
 			<div class="section-head">
 				<div>
 					<p class="eyebrow">Feed</p>
@@ -402,7 +422,7 @@
 		</section>
 	</div>
 
-	{#if !userInfo.getEmail()}
+	{#if isGuest()}
 		<div class="auth-note">
 			<h3>You need to be signed in to post a review.</h3>
 			<div class="links">
