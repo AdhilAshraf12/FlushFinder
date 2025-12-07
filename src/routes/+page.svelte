@@ -1,6 +1,14 @@
 <script>
 	import { userInfo } from '$lib/userInfoStore.js';
 
+	// Detect success message from reset password redirect
+	let resetSuccess = false;
+
+	if (typeof window !== "undefined") {
+		const params = new URLSearchParams(window.location.search);
+		resetSuccess = params.get("resetSuccess") === "true";
+	}
+
 	const signIn = (e) => {
 		e.preventDefault();
 
@@ -13,22 +21,37 @@
 	};
 </script>
 
-<div><div><a href="/" class="selected">Sign in</a> <a href="/signup">Register</a></div></div>
+<div class="header-toggle">
+	<div>
+		<a href="/" class="selected">Sign in</a>
+		<a href="/signup">Register</a>
+	</div>
+</div>
+
+{#if resetSuccess}
+	<div class="reset-success">
+		✔ Email has been sent! Check your inbox.
+	</div>
+{/if}
+
 <div><img src="/FlushFinder.png" alt="rgw" /></div>
+
 <form onsubmit={(e) => signIn(e)}>
 	<label for="email">Email</label>
-	<input type="email" name="email" placeholder="name.last@gmail.com" required />
+	<input type="email" name="email" placeholder="first.last@gmail.com" required />
 
 	<label for="password">Password</label>
-	<input type="password" name="password" placeholder="your password here" required />
+	<input type="password" name="password" placeholder="Your password here" required />
 
 	<button type="submit">Sign in</button>
 
-	<!-- <a href="https://youtu.be/dQw4w9WgXcQ?si=qhEw1V2XyojYuqNH">Forgot Password?</a> -->
 	<a href="/forgotpassword">Forgot Password?</a>
 </form>
-<div>
+
+<!-- Centered guest button -->
+<div class="guest-container">
 	<a
+		class="guest-link"
 		href="/inapp/find"
 		onclick={() => {
 			userInfo.setEmail('test@mail.com');
@@ -41,27 +64,58 @@
 
 <style>
 	img {
-		margin: 0svh auto;
+		margin: 0 auto;
+		display: block;
 	}
-	div > a {
-		padding-top: 10svh;
+
+	/* Success banner */
+	.reset-success {
+		background: #d1ffd6;
+		color: #1b7a2f;
+		padding: 1rem;
+		text-align: center;
+		border-radius: 0.5rem;
+		margin: 1rem;
+		font-weight: 600;
+		border: 1px solid #8adf9a;
+	}
+
+	/* Guest button centered */
+	.guest-container {
+		display: flex;
+		justify-content: center;
+		margin-top: 5svh;
+	}
+
+	.guest-link {
 		color: #7b7d94;
 		text-decoration: none;
-		margin: 0svh auto;
 	}
+
 	button {
 		background-color: #2c2c2c;
 		border: none;
 		border-radius: 1rem;
 		color: #f5f5f5;
 		padding: 2svb;
-		margin: 2svh 0svw;
+		margin: 2svh 0;
 	}
+
+	button:hover {
+		background: #3f3f3f;
+		transform: translateY(-1px);
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+	}
+
+	button:active {
+		transform: translateY(0);
+	}
+
 	form {
 		border-radius: 1rem;
 		border: 1px solid #d9d9d9;
 		padding: 4svh 4svw;
-		margin: 0svh 4svw;
+		margin: 0 4svw;
 
 		display: flex;
 		flex-direction: column;
@@ -76,34 +130,37 @@
 
 	form a {
 		color: #2c2c2c;
-		margin: 0px;
+		margin: 0;
 		text-decoration: underline;
 	}
 
-	div {
+	.header-toggle {
 		display: flex;
-		justify-content: right;
+		justify-content: flex-end;
+		padding: 2rem;
 	}
 
-	div > div {
-		text-decoration: none;
-		column-gap: 1svw;
-		/* background-color: #3f3d3d; */
+	.header-toggle > div {
+		display: flex;
+		column-gap: 0.5rem;
 		background: #3f3d3d;
 		border-radius: 100px;
-		margin: 4svh 2svw;
-	}
-	div > div > a {
-		text-decoration: none;
-		padding: 1svb 1.5svw;
-		border-radius: 1rem;
-		color: white;
+		padding: 0.25rem;
 	}
 
-	.selected {
-		/* background-color: #797fd2; */
-		color: white;
-		background: #797fd2;
+	.header-toggle a {
+		text-decoration: none;
+		padding: 0.5rem 1.5rem;
 		border-radius: 100px;
+		color: white;
+		transition: all 0.2s ease;
+	}
+
+	.header-toggle a:hover:not(.selected) {
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.header-toggle .selected {
+		background: #797fd2;
 	}
 </style>

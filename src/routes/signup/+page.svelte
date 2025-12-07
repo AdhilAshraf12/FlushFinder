@@ -13,7 +13,12 @@
 	};
 </script>
 
-<div><div><a href="/" class="selected">Sign in</a> <a href="/signup">Register</a></div></div>
+<div class="header-toggle">
+	<div>
+		<a href="/">Sign in</a>
+		<a href="/signup" class="selected">Register</a>		
+	</div>
+</div>
 <div><img src="/FlushFinder.png" alt="rgw" /></div>
 
 <form onsubmit={(e) => signup(e)}>
@@ -59,6 +64,17 @@
 		padding: 2svb;
 		margin: 2svh 0svw;
 	}
+
+	button:hover {
+		background: #3f3f3f;
+		transform: translateY(-1px);
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+	}
+
+	button:active {
+		transform: translateY(0);
+	}
+
 	form {
 		border-radius: 1rem;
 		border: 1px solid #d9d9d9;
@@ -96,31 +112,35 @@
 		margin: 0px;
 	}
 
-	div {
+	.header-toggle {
 		display: flex;
-		justify-content: right;
+		justify-content: flex-end;
+		padding: 2rem;
 	}
 
-	div > div {
-		text-decoration: none;
-		column-gap: 1svw;
-		/* background-color: #3f3d3d; */
-		background: #797fd2;
-		border-radius: 100px;
-		margin: 4svh 2svw;
-	}
-	div > a {
-		text-decoration: none;
-		padding: 1svb 1.5svw;
-		border-radius: 1rem;
-		color: white;
-	}
-
-	.selected {
-		/* background-color: #797fd2; */
-		color: white;
-
+	.header-toggle > div {
+		display: flex;
+		column-gap: 0.5rem;
 		background: #3f3d3d;
 		border-radius: 100px;
+		padding: 0.25rem;
 	}
+
+	.header-toggle a {
+		text-decoration: none;
+		padding: 0.5rem 1.5rem;
+		border-radius: 100px;
+		color: white;
+		transition: all 0.2s ease;
+	}
+
+	.header-toggle a:hover:not(.selected) {
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.header-toggle .selected {
+		background: #797fd2;
+	}
+
 </style>
+
