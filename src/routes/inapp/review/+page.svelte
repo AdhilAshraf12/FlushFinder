@@ -62,23 +62,28 @@
 	let editingId = $state(null);
 
 	$effect(() => {
-        if (userInfo?.getEmail && userInfo.getEmail() == '') {
-            goto('/');
-        }
-    });
+		if (userInfo?.getEmail && userInfo.getEmail() == '') {
+			goto('/');
+		}
+	});
 
 	function toggleAccess(option) {
-    if (accessibility.includes(option)) {
-        // If it's already selected, remove it
-        accessibility = accessibility.filter((item) => item !== option);
-    } else {
-        // If it's not selected, add it
-        accessibility = [...accessibility, option];
-    }
-    helperMessage = '';
+		if (accessibility.includes(option)) {
+			// If it's already selected, remove it
+			accessibility = accessibility.filter((item) => item !== option);
+		} else {
+			// If it's not selected, add it
+			accessibility = [...accessibility, option];
+		}
+		helperMessage = '';
 	}
 
 	function submitReview() {
+		if (userInfo.getEmail() === 'test@mail.com') {
+			helperMessage = 'Please log in to leave a review';
+			return;
+		}
+
 		if (!title.trim() || !review.trim() || rating === 0) {
 			helperMessage = 'Add a title, rating, and a short note before submitting.';
 			return;
@@ -230,70 +235,68 @@
 				{/each}
 			</div>
 		</section>
-
-		<section class="card">
-			<div class="section-head">
-				<div>
-					<p class="eyebrow">Your review</p>
-					<h2>Rate & write</h2>
-					<p class="hint">Pick a star rating and add a title plus a quick note.</p>
+		{#if userInfo.getEmail() !== 'test@mail.com'}
+			<section class="card">
+				<div class="section-head">
+					<div>
+						<p class="eyebrow">Your review</p>
+						<h2>Rate & write</h2>
+						<p class="hint">Pick a star rating and add a title plus a quick note.</p>
+					</div>
 				</div>
-			</div>
 
-			
-			<div class="stars" aria-label="Star rating from one to five">
-				{#each [1, 2, 3, 4, 5] as star}
-					<button
-						type="button"
-						class:selected={rating >= star}
-						aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
-						onclick={() => {
-							rating = star;
-							helperMessage = '';
-						}}
-					>
-						{STAR_FILLED}
-					</button>
-				{/each}
-				<span class="rating-label">{rating > 0 ? `${rating}/5` : 'Tap a star'}</span>
-			</div>
+				<div class="stars" aria-label="Star rating from one to five">
+					{#each [1, 2, 3, 4, 5] as star}
+						<button
+							type="button"
+							class:selected={rating >= star}
+							aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+							onclick={() => {
+								rating = star;
+								helperMessage = '';
+							}}
+						>
+							{STAR_FILLED}
+						</button>
+					{/each}
+					<span class="rating-label">{rating > 0 ? `${rating}/5` : 'Tap a star'}</span>
+				</div>
 
+				<label class="input-group">
+					<span>Title</span>
+					<input
+						name="title"
+						placeholder="Example: Clean and well-lit"
+						bind:value={title}
+						oninput={() => (helperMessage = '')}
+					/>
+				</label>
 
-			<label class="input-group">
-				<span>Title</span>
-				<input
-					name="title"
-					placeholder="Example: Clean and well-lit"
-					bind:value={title}
-					oninput={() => (helperMessage = '')}
-				/>
-			</label>
+				<label class="input-group">
+					<span>Review</span>
+					<textarea
+						name="review"
+						rows="4"
+						placeholder="Keep it short: what stood out, how busy it was, any tips."
+						bind:value={review}
+						oninput={() => (helperMessage = '')}
+					></textarea>
+				</label>
 
-			<label class="input-group">
-				<span>Review</span>
-				<textarea
-					name="review"
-					rows="4"
-					placeholder="Keep it short: what stood out, how busy it was, any tips."
-					bind:value={review}
-					oninput={() => (helperMessage = '')}
-				></textarea>
-			</label>
-
-			{#if helperMessage}
-				<p class="helper">{helperMessage}</p>
-			{/if}
-
-			<div class="actions">
-				<button class="submit" type="button" onclick={submitReview}>
-					{editingId ? 'Update review' : 'Submit review'}
-				</button>
-				{#if editingId}
-					<button class="ghost" type="button" onclick={cancelEdit}>Cancel</button>
+				{#if helperMessage}
+					<p class="helper">{helperMessage}</p>
 				{/if}
-			</div>
-		</section>
 
+				<div class="actions">
+					<button class="submit" type="button" onclick={submitReview}>
+						{editingId ? 'Update review' : 'Submit review'}
+					</button>
+					{#if editingId}
+						<button class="ghost" type="button" onclick={cancelEdit}>Cancel</button>
+					{/if}
+				</div>
+			</section>
+		{/if}
 		<section class="card reviews">
 			<div class="section-head">
 				<div>
@@ -356,7 +359,7 @@
 		</section>
 	</div>
 
-	{#if !userInfo.getEmail()}
+	{#if userInfo.getEmail() === 'test@mail.com'}
 		<div class="auth-note">
 			<h3>You need to be signed in to post a review.</h3>
 			<div class="links">
@@ -483,7 +486,9 @@
 		font-size: 26px;
 		color: #c8c8d6;
 		cursor: pointer;
-		transition: transform 0.1s ease, color 0.2s ease;
+		transition:
+			transform 0.1s ease,
+			color 0.2s ease;
 	}
 
 	.stars button.selected {
@@ -546,7 +551,9 @@
 		font-weight: 700;
 		cursor: pointer;
 		box-shadow: 0 10px 18px rgba(79, 55, 139, 0.3);
-		transition: transform 0.1s ease, box-shadow 0.15s ease;
+		transition:
+			transform 0.1s ease,
+			box-shadow 0.15s ease;
 	}
 
 	.submit:hover {
