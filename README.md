@@ -12,12 +12,13 @@ npm start
 
 # Team
 
-| Member Name | UCalgary Email |
-|Fatima Asif | fatima.asif@ucalgary.ca |
-Tara Cherian | tara.cherian@ucalgary.ca |
-Adhil Ashraf | adhil.ashraf@ucalgary.ca |
-Brock Tomlinson | brock.tomlinson@ucalgary.ca |
-Rimal Rizvi | rimal.rizvi@ucalgary.ca |
+| Member Name     | UCalgary Email              |
+| --------------- | --------------------------- |
+| Fatima Asif     | fatima.asif@ucalgary.ca     |
+| Tara Cherian    | tara.cherian@ucalgary.ca    |
+| Adhil Ashraf    | adhil.ashraf@ucalgary.ca    |
+| Brock Tomlinson | brock.tomlinson@ucalgary.ca |
+| Rimal Rizvi     | rimal.rizvi@ucalgary.ca     |
 
 Below is standard sveltekit docs
 
