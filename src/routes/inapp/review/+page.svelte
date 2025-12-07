@@ -62,23 +62,28 @@
 	let editingId = $state(null);
 
 	$effect(() => {
-        if (userInfo?.getEmail && userInfo.getEmail() == '') {
-            goto('/');
-        }
-    });
+		if (userInfo?.getEmail && userInfo.getEmail() == '') {
+			goto('/');
+		}
+	});
 
 	function toggleAccess(option) {
-    if (accessibility.includes(option)) {
-        // If it's already selected, remove it
-        accessibility = accessibility.filter((item) => item !== option);
-    } else {
-        // If it's not selected, add it
-        accessibility = [...accessibility, option];
-    }
-    helperMessage = '';
+		if (accessibility.includes(option)) {
+			// If it's already selected, remove it
+			accessibility = accessibility.filter((item) => item !== option);
+		} else {
+			// If it's not selected, add it
+			accessibility = [...accessibility, option];
+		}
+		helperMessage = '';
 	}
 
 	function submitReview() {
+		if (userInfo.getEmail() === 'test@mail.com') {
+			helperMessage = 'Please log in to leave a review';
+			return;
+		}
+
 		if (!title.trim() || !review.trim() || rating === 0) {
 			helperMessage = 'Add a title, rating, and a short note before submitting.';
 			return;
@@ -240,7 +245,6 @@
 				</div>
 			</div>
 
-			
 			<div class="stars" aria-label="Star rating from one to five">
 				{#each [1, 2, 3, 4, 5] as star}
 					<button
@@ -257,7 +261,6 @@
 				{/each}
 				<span class="rating-label">{rating > 0 ? `${rating}/5` : 'Tap a star'}</span>
 			</div>
-
 
 			<label class="input-group">
 				<span>Title</span>
@@ -483,7 +486,9 @@
 		font-size: 26px;
 		color: #c8c8d6;
 		cursor: pointer;
-		transition: transform 0.1s ease, color 0.2s ease;
+		transition:
+			transform 0.1s ease,
+			color 0.2s ease;
 	}
 
 	.stars button.selected {
@@ -546,7 +551,9 @@
 		font-weight: 700;
 		cursor: pointer;
 		box-shadow: 0 10px 18px rgba(79, 55, 139, 0.3);
-		transition: transform 0.1s ease, box-shadow 0.15s ease;
+		transition:
+			transform 0.1s ease,
+			box-shadow 0.15s ease;
 	}
 
 	.submit:hover {

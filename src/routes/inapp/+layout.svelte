@@ -1,6 +1,8 @@
 <!-- src/routes/inapp/+layout.svelte -->
 <script>
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { userInfo } from '$lib/userInfoStore';
 
 	let pagePath = $derived($page.url.pathname);
 
