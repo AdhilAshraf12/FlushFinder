@@ -44,9 +44,11 @@
 	let panX = $state(0);
 	let panY = $state(0);
 
+	import { isGuest } from '$lib/userInfoStore';
+
 	$effect(() => {
-		if (userInfo.getEmail() === '') {
-			location.href = '/';
+		if (isGuest()) {
+			// If you previously redirected guests, we no longer redirect; keep viewing allowed
 		}
 	});
 
@@ -101,14 +103,14 @@
 					<input type="range" min="0.85" max="1.35" step="0.05" bind:value={zoom} />
 				</label>
 				<div class="pan-controls" aria-label="Pan controls">
-					<button type="button" aria-label="Pan up" on:click={() => nudge(0, -12)}>^</button>
+					<button type="button" aria-label="Pan up" onclick={() => nudge(0, -12)}>^</button>
 					<div>
-						<button type="button" aria-label="Pan left" on:click={() => nudge(-12, 0)}>&lt;</button>
-						<button type="button" aria-label="Pan right" on:click={() => nudge(12, 0)}>&gt;</button>
+						<button type="button" aria-label="Pan left" onclick={() => nudge(-12, 0)}>&lt;</button>
+						<button type="button" aria-label="Pan right" onclick={() => nudge(12, 0)}>&gt;</button>
 					</div>
-					<button type="button" aria-label="Pan down" on:click={() => nudge(0, 12)}>v</button>
+					<button type="button" aria-label="Pan down" onclick={() => nudge(0, 12)}>v</button>
 				</div>
-				<button type="button" class="ghost" on:click={resetView}>Reset view</button>
+				<button type="button" class="ghost" onclick={resetView}>Reset view</button>
 			</div>
 		</header>
 		<div
@@ -125,7 +127,7 @@
 						type="button"
 						class:selected={selectedId === loc.name}
 						style={`left: ${loc.coords.x}%; top: ${loc.coords.y}%;`}
-						on:click={() => selectLocation(loc)}
+						onclick={() => selectLocation(loc)}
 						aria-label={`Select ${loc.name}`}
 					>
 						<span class="dot"></span>
@@ -139,9 +141,10 @@
 
 	<form
 		class="search"
-		on:submit|preventDefault={() => {
-			// filtering happens on input binding
-		}}
+		onsubmit={(e) => {
+				e.preventDefault();
+				// filtering happens on input binding
+			}}
 	>
 		<div class="search-box">
 			<img src="https://www.svgrepo.com/show/532552/search-alt-2.svg" alt="" />
@@ -153,11 +156,11 @@
 		</div>
 		<div class="filters" aria-label="Filters">
 			{#each filters as filter}
-				<button
-					type="button"
-					class:selected={activeFilter === filter}
-					on:click={() => (activeFilter = filter)}
-				>
+					<button
+						type="button"
+						class:selected={activeFilter === filter}
+						onclick={() => (activeFilter = filter)}
+					>
 					{filter}
 				</button>
 			{/each}
@@ -169,20 +172,42 @@
 			<p class="empty">No results. Try clearing filters.</p>
 		{:else}
 			{#each filteredLocations() as loc}
-				<article class={`card ${selectedId === loc.name ? 'active' : ''}`} on:click={() => selectLocation(loc)}>
-					<header>
-						<div>
-							<h2>{loc.name}</h2>
-							<p class="meta">{loc.distance} / {loc.time}</p>
+				<article class={`card ${selectedId === loc.name ? 'active' : ''}`}>
+					<div
+						class="card-link"
+						role="button"
+						tabindex="0"
+						aria-label={`Select ${loc.name} — single click highlights, double-click opens reviews`}
+						onclick={() => selectLocation(loc)}
+						ondblclick={() => goto(`/inapp/review?name=${encodeURIComponent(loc.name)}&link=${encodeURIComponent(loc.link)}`)}
+						onkeydown={(e) => {
+							// Enter to select, Shift+Enter to open reviews for keyboard users
+							if (e.key === 'Enter') {
+								if (e.shiftKey) {
+									goto(`/inapp/review?name=${encodeURIComponent(loc.name)}&link=${encodeURIComponent(loc.link)}`);
+								} else {
+									selectLocation(loc);
+								}
+							}
+						}}
+					>
+						<header>
+							<div>
+								<h2>{loc.name}</h2>
+								<p class="meta">{loc.distance} / {loc.time}</p>
+							</div>
+						</header>
+						<div class="tags">
+							<span class="pill">{loc.availability}</span>
+							<span class="pill neutral">{loc.condition}</span>
+							{#each loc.accessibility as tag}
+								<span class="pill ghost">{tag}</span>
+							{/each}
 						</div>
-						<button class="go" type="button" on:click={() => goto(loc.link)}>Go</button>
-					</header>
-					<div class="tags">
-						<span class="pill">{loc.availability}</span>
-						<span class="pill neutral">{loc.condition}</span>
-						{#each loc.accessibility as tag}
-							<span class="pill ghost">{tag}</span>
-						{/each}
+					</div>
+					<div class="card-actions">
+						<a class="reviews-link" href={`/inapp/review?name=${encodeURIComponent(loc.name)}&link=${encodeURIComponent(loc.link)}`} onclick={(e) => e.stopPropagation()}>Reviews</a>
+						<a class="go" href={loc.link} onclick={(e) => e.stopPropagation()}>Go</a>
 					</div>
 				</article>
 			{/each}
@@ -469,6 +494,22 @@
 		justify-content: space-between;
 		align-items: center;
 		gap: 12px;
+	}
+
+	.card-actions {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+	}
+
+	.reviews-link {
+		background: transparent;
+		border: 1px solid #d6d6de;
+		padding: 8px 12px;
+		border-radius: 10px;
+		font-weight: 700;
+		text-decoration: none;
+		color: #4f378b;
 	}
 
 	.card h2 {

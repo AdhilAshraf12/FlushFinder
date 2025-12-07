@@ -3,15 +3,22 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { userInfo } from '$lib/userInfoStore';
+	import Icon from '$lib/assets/Icon.png';
+	import { onMount } from 'svelte';
 
-	let pagePath = $derived($page.url.pathname);
+	let profilePicture = 'https://picsum.photos/100/100';
 
-	let { children } = $props();
+	onMount(() => {
+		const p = userInfo.getProfilePicture();
+		if (p) profilePicture = p;
+	});
+
+	$: pagePath = $page.url.pathname;
 </script>
 
 <!-- Main content area -->
 <div class="pb-20">
-	{@render children?.()}
+	<slot />
 </div>
 
 <!-- Fixed bottom navigation -->
@@ -49,10 +56,7 @@
 			class={'flex flex-col items-center gap-1 px-8 py-2 rounded-full transition-all ' +
 				(pagePath === '/inapp/profile' ? 'bg-white text-purple-700 shadow' : 'text-gray-600')}
 		>
-			<svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-				<circle cx="12" cy="7" r="4"></circle>
-			</svg>
+			<img src={profilePicture} alt="Profile" class="w-6 h-6 rounded-full" />
 			<span class="text-xs">Profile</span>
 		</a>
 	</div>

@@ -15,7 +15,8 @@
     let editStars = 0;
 
     $: user = $profileStore;
-    $: isGuest = userInfo.getEmail() === 'test@mail.com';
+    import { isGuest as _isGuest } from '$lib/userInfoStore';
+    $: isGuest = _isGuest();
     $: displayedFavorites = showAllFavorites ? user.favorites : user.favorites.slice(0, 3);
     $: stats = profileStore.getStats(user);
     $: statusInfo = profileStore.getStatus(stats.reviewsCount);
