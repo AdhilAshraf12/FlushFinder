@@ -1,6 +1,8 @@
 <script>
 	import { userInfo } from '$lib/userInfoStore';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { browser } from '$app/environment';
 
 	const availabilityOptions = ['Open now', 'Busy but open', 'Closed for cleaning'];
 	const conditionOptions = ['Sparkling clean', 'Usable', 'Needs attention'];
@@ -50,7 +52,18 @@
 		}
 	];
 
-	let reviews = $state(seedReviews);
+	// Reviews stored per-location keyed by location name. Seed the example location.
+	let reviewsByLocation = $state({ 'Deville Coffee Washroom': seedReviews });
+	// load persisted reviews if available
+	if (browser) {
+		try {
+			const raw = sessionStorage.getItem('reviewsByLocation');
+			if (raw) reviewsByLocation = JSON.parse(raw);
+		} catch (e) {
+			// ignore parse errors
+		}
+	}
+	let currentReviews = $state([]);
 	let rating = $state(0);
 	let title = $state('');
 	let review = $state('');
@@ -60,6 +73,31 @@
 	let helperMessage = $state('');
 	let currentAuthor = $derived(userInfo?.getUsername ? userInfo.getUsername() : 'You');
 	let editingId = $state(null);
+
+	let locationName = $state('Selected location');
+	let locationLink = $state('/inapp/find');
+
+	$effect(() => {
+		const n = $page.url.searchParams.get('name');
+		const l = $page.url.searchParams.get('link');
+		locationName = n ?? 'Selected location';
+		locationLink = l ?? '/inapp/find';
+	});
+
+	// keep currentReviews in sync with the active location
+	$effect(() => {
+		currentReviews = reviewsByLocation[locationName] ?? [];
+	});
+
+	// persist reviews to sessionStorage on changes (browser only)
+	$effect(() => {
+		if (!browser) return;
+		try {
+			sessionStorage.setItem('reviewsByLocation', JSON.stringify(reviewsByLocation));
+		} catch (e) {
+			// ignore storage errors
+		}
+	});
 
 	$effect(() => {
         if (userInfo?.getEmail && userInfo.getEmail() == '') {
@@ -84,8 +122,11 @@
 			return;
 		}
 
+		// Ensure an array exists for this location
+		const list = reviewsByLocation[locationName] ?? [];
+
 		if (editingId) {
-			reviews = reviews.map((item) =>
+			reviewsByLocation[locationName] = list.map((item) =>
 				item.id === editingId
 					? {
 							...item,
@@ -108,7 +149,7 @@
 				status: { availability, condition, accessibility }
 			};
 
-			reviews = [newReview, ...reviews].slice(0, 6);
+			reviewsByLocation[locationName] = [newReview, ...list].slice(0, 20);
 			helperMessage = 'Thanks for sharing. Your review is live.';
 		}
 
@@ -122,7 +163,8 @@
 	}
 
 	function deleteReview(id) {
-		reviews = reviews.filter((review) => review.id !== id);
+		const list = reviewsByLocation[locationName] ?? [];
+		reviewsByLocation[locationName] = list.filter((review) => review.id !== id);
 		helperMessage = 'Your review was deleted.';
 	}
 
@@ -161,6 +203,10 @@
 			<p class="eyebrow">Share your experience</p>
 			<h1>Rate this bathroom</h1>
 			<p class="lede">Leave a fast status check, pick a rating, and add a short headline.</p>
+		</div>
+		<div class="location-row">
+			<h2 class="location-name">{locationName}</h2>
+			<button class="go" type="button" onclick={() => goto(locationLink)}>GO</button>
 		</div>
 		<div class="pill">Recent reviews</div>
 	</header>
@@ -302,10 +348,10 @@
 				</div>
 			</div>
 
-			{#if reviews.length === 0}
+			{#if currentReviews.length === 0}
 				<p class="hint">No reviews yet. Be the first to share your experience.</p>
 			{:else}
-				{#each reviews as item (item.id)}
+				{#each currentReviews as item (item.id)}
 					<article class="review">
 						<header>
 							<div>
