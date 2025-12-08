@@ -351,9 +351,17 @@
 <header>
   <div style="display: flex; align-items: center; gap: 8px;">
     <h2>{loc.name}</h2>
-							<div><span class="stars-inline">{STAR_FILLED.repeat(Math.round($ratings))}</span></div>
-
-    
+    <div style="display: flex; gap: 2px;">
+      {#each [1,2,3,4,5] as star}
+        <span
+          style="
+            font-size: 18px;
+            color: {star <= loc.rating ? 'gold' : 'transparent'};
+            -webkit-text-stroke: 1px gold;
+          "
+        >★</span>
+      {/each}
+    </div>
   </div>
   <p class="meta">{loc.distance} km / {loc.time}</p>
 </header>
