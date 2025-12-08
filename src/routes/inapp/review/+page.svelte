@@ -1,7 +1,9 @@
 <script>
 	import { userInfo } from '$lib/userInfoStore';
 	import { goto } from '$app/navigation';
-	import { sharedReviews } from '$lib';
+	import { page } from '$app/stores';
+	import { browser } from '$app/environment';
+	import { profileStore } from '$lib/profileStore.js';
 
 	const availabilityOptions = ['Open now', 'Busy but open', 'Closed for cleaning'];
 	const conditionOptions = ['Sparkling clean', 'Usable', 'Needs attention'];
@@ -51,7 +53,18 @@
 		}
 	];
 
-	let reviews = $state(seedReviews);
+	// Reviews stored per-location keyed by location name. Seed the example location.
+	let reviewsByLocation = $state({ 'Deville Coffee Washroom': seedReviews });
+	// load persisted reviews if available
+	if (browser) {
+		try {
+			const raw = sessionStorage.getItem('reviewsByLocation');
+			if (raw) reviewsByLocation = JSON.parse(raw);
+		} catch (e) {
+			// ignore parse errors
+		}
+	}
+	let currentReviews = $state([]);
 	let rating = $state(0);
 	let title = $state('');
 	let review = $state('');
@@ -59,14 +72,55 @@
 	let condition = $state(conditionOptions[0]);
 	let accessibility = $state([]);
 	let helperMessage = $state('');
+	let helperType = $state('');
 	let currentAuthor = $derived(userInfo?.getUsername ? userInfo.getUsername() : 'You');
 	let editingId = $state(null);
 
+	let locationName = $state(null);
+	let locationLink = $state('/inapp/find');
+	let isFavorited = $state(false);
+	let locationSelected = $state(false);
+
 	$effect(() => {
-		if (userInfo?.getEmail && userInfo.getEmail() == '') {
-			goto('/');
+		const favs = $profileStore?.favorites ?? [];
+		isFavorited = favs.some((f) => f.name === locationName);
+	});
+
+	$effect(() => {
+		const n = $page.url.searchParams.get('name');
+		const l = $page.url.searchParams.get('link');
+		locationName = n ?? null;
+		locationLink = l ?? '/inapp/find';
+		locationSelected = !!n;
+	});
+
+	
+	$effect(() => {
+		currentReviews = reviewsByLocation[locationName] ?? [];
+	});
+
+	
+	$effect(() => {
+		if (!browser) return;
+		try {
+			sessionStorage.setItem('reviewsByLocation', JSON.stringify(reviewsByLocation));
+		} catch (e) {
+			
 		}
 	});
+
+function scrollToReviews() {
+    if (!browser) return;
+    const el = document.getElementById('reviews-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+function isGuest() {
+	const e = userInfo.getEmail();
+	return !e || e === 'test@mail.com';
+}
+
+	
 
 	function toggleAccess(option) {
 		if (accessibility.includes(option)) {
@@ -77,21 +131,33 @@
 			accessibility = [...accessibility, option];
 		}
 		helperMessage = '';
+		helperType = '';
 	}
 
 	function submitReview() {
+		if (!locationSelected) {
+			helperMessage = 'Please select a bathroom before submitting a review.';
+			helperType = 'error';
+			return;
+		}
+
 		if (userInfo.getEmail() === 'test@mail.com') {
 			helperMessage = 'Please log in to leave a review';
+			helperType = 'error';
 			return;
 		}
 
 		if (!title.trim() || !review.trim() || rating === 0) {
 			helperMessage = 'Add a title, rating, and a short note before submitting.';
+			helperType = 'error';
 			return;
 		}
 
+		// Ensure an array exists for this location
+		const list = reviewsByLocation[locationName] ?? [];
+
 		if (editingId) {
-			sharedReviews.update(list => list.map((item) =>
+			reviewsByLocation[locationName] = list.map((item) =>
 				item.id === editingId
 					? {
 							...item,
@@ -101,8 +167,9 @@
 							status: { availability, condition, accessibility }
 						}
 					: item
-			));
-			helperMessage = 'Your review was updated.';
+			);
+				helperMessage = 'Your review was updated.';
+				helperType = 'success';
 		} else {
 			const newReview = {
 				id: Date.now(), // Simple unique ID
@@ -114,8 +181,9 @@
 				status: { availability, condition, accessibility }
 			};
 
-			sharedReviews.update(list => [newReview, ...list].slice(0, 6));
-			helperMessage = 'Thanks for sharing. Your review is live.';
+			reviewsByLocation[locationName] = [newReview, ...list].slice(0, 20);
+				helperMessage = 'Thanks for sharing. Your review is live.';
+				helperType = 'success';
 		}
 
 		editingId = null;
@@ -128,8 +196,10 @@
 	}
 
 	function deleteReview(id) {
-		sharedReviews.update(list => list.filter((review) => review.id !== id));
+		const list = reviewsByLocation[locationName] ?? [];
+		reviewsByLocation[locationName] = list.filter((review) => review.id !== id);
 		helperMessage = 'Your review was deleted.';
+		helperType = 'success';
 	}
 
 	function isOwnReview(item) {
@@ -147,17 +217,28 @@
 			? [...item.status.accessibility]
 			: [item.status.accessibility];
 		helperMessage = 'Editing your review...';
+		helperType = 'info';
 	}
 
 	function cancelEdit() {
 		editingId = null;
 		helperMessage = 'Edit cancelled.';
+		helperType = 'info';
 		title = '';
 		review = '';
 		rating = 0;
 		availability = availabilityOptions[0];
 		condition = conditionOptions[0];
 		accessibility = [];
+	}
+
+	function toggleFavoriteLocation() {
+		if (isFavorited) {
+			const fav = ($profileStore?.favorites || []).find((f) => f.name === locationName);
+			if (fav) profileStore.removeFavorite(fav.id);
+		} else {
+			profileStore.addFavorite({ name: locationName, address: locationLink, rating: 0 });
+		}
 	}
 </script>
 
@@ -168,8 +249,27 @@
 			<h1>Rate this bathroom</h1>
 			<p class="lede">Leave a fast status check, pick a rating, and add a short headline.</p>
 		</div>
-		<div class="pill">Recent reviews</div>
+		<div class="location-row">
+			<!-- left side intentionally empty to keep header layout -->
+			<div class="action-buttons">
+				{#if locationSelected}
+					<span class="location-label" title={locationName}>{locationName}</span>
+				{/if}
+				<button
+					class="favorite"
+					type="button"
+					aria-pressed={isFavorited}
+					onclick={toggleFavoriteLocation}
+					aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+				>
+					<span class="heart">{isFavorited ? '♥' : '♡'}</span>
+				</button>
+				<button class="go" type="button" onclick={() => goto(locationLink)}>GO</button>
+			</div>
+		</div>
 	</header>
+
+			
 
 	<div class="grid">
 		<section class="card">
@@ -236,15 +336,15 @@
 				{/each}
 			</div>
 		</section>
-
-		<section class="card">
-			<div class="section-head">
-				<div>
-					<p class="eyebrow">Your review</p>
-					<h2>Rate & write</h2>
-					<p class="hint">Pick a star rating and add a title plus a quick note.</p>
+		{#if userInfo.getEmail() !== 'test@mail.com'}
+			<section class="card">
+				<div class="section-head">
+					<div>
+						<p class="eyebrow">Your review</p>
+						<h2>Rate & write</h2>
+						<p class="hint">Pick a star rating and add a title plus a quick note.</p>
+					</div>
 				</div>
-			</div>
 
 			<div class="stars" aria-label="Star rating from one to five">
 				{#each [1, 2, 3, 4, 5] as star}
@@ -255,6 +355,7 @@
 						onclick={() => {
 							rating = star;
 							helperMessage = '';
+							helperType = '';
 						}}
 					>
 						{STAR_FILLED}
@@ -269,7 +370,7 @@
 					name="title"
 					placeholder="Example: Clean and well-lit"
 					bind:value={title}
-					oninput={() => (helperMessage = '')}
+					oninput={() => { helperMessage = ''; helperType = ''; }}
 				/>
 			</label>
 
@@ -280,16 +381,23 @@
 					rows="4"
 					placeholder="Keep it short: what stood out, how busy it was, any tips."
 					bind:value={review}
-					oninput={() => (helperMessage = '')}
+					oninput={() => { helperMessage = ''; helperType = ''; }}
 				></textarea>
 			</label>
 
 			{#if helperMessage}
-				<p class="helper">{helperMessage}</p>
+				<p class="helper {helperType}">{helperMessage}</p>
 			{/if}
 
 			<div class="actions">
-				<button class="submit" type="button" onclick={submitReview}>
+				<button
+					class:disabled={isGuest() || !locationSelected}
+					class="submit"
+					type="button"
+					onclick={submitReview}
+					aria-disabled={isGuest() || !locationSelected}
+					title={!locationSelected ? 'Select a bathroom first' : ''}
+				>
 					{editingId ? 'Update review' : 'Submit review'}
 				</button>
 				{#if editingId}
@@ -297,8 +405,17 @@
 				{/if}
 			</div>
 		</section>
+		{:else}
+		<section class="card guest-banner">
+			<p>You are continuing as a guest. Guests cannot post reviews.</p>
+			<div class="guest-actions">
+				<button type="button" class="ghost" onclick={scrollToReviews}>Continue reading</button>
+				<button type="button" class="submit" onclick={() => goto('/')}>Log in to post</button>
+			</div>
+		</section>
+		{/if}
 
-		<section class="card reviews">
+		<section id="reviews-section" class="card reviews">
 			<div class="section-head">
 				<div>
 					<p class="eyebrow">Feed</p>
@@ -306,10 +423,10 @@
 				</div>
 			</div>
 
-			{#if $sharedReviews.length === 0}
+			{#if currentReviews.length === 0}
 				<p class="hint">No reviews yet. Be the first to share your experience.</p>
 			{:else}
-				{#each $sharedReviews as item (item.id)}
+				{#each currentReviews as item (item.id)}
 					<article class="review">
 						<header>
 							<div>
@@ -341,6 +458,17 @@
 								{/if}
 							</div>
 						</header>
+
+							{#if !locationSelected}
+								<div class="selection-overlay" role="dialog" aria-label="Select a washroom">
+									<div class="overlay-card">
+										<p>Please select a washroom to read or leave reviews.</p>
+										<div class="overlay-actions">
+											<button class="submit" type="button" onclick={() => goto('/inapp/find')}>Select a washroom</button>
+										</div>
+									</div>
+								</div>
+							{/if}
 						<p class="body">{item.body}</p>
 						<div class="tags">
 							<span>{item.status.availability}</span>
@@ -360,15 +488,7 @@
 		</section>
 	</div>
 
-	{#if !userInfo.getEmail()}
-		<div class="auth-note">
-			<h3>You need to be signed in to post a review.</h3>
-			<div class="links">
-				<a href="/">Log in</a>
-				<a href="/signup">Create an account</a>
-			</div>
-		</div>
-	{/if}
+	<!-- Removed duplicate auth-note: guests see the prominent guest-banner above the form -->
 </section>
 
 <style>
@@ -379,6 +499,7 @@
 	}
 
 	.page {
+		position: relative;
 		max-width: 1100px;
 		margin: 0 auto;
 		padding: 24px 18px 56px;
@@ -417,13 +538,7 @@
 		color: rgba(255, 255, 255, 0.85);
 	}
 
-	.pill {
-		border: 1px solid rgba(255, 255, 255, 0.5);
-		padding: 8px 14px;
-		border-radius: 999px;
-		font-weight: 600;
-		font-size: 13px;
-	}
+	/* .pill removed; styles cleaned up. */
 
 	.grid {
 		display: grid;
@@ -536,6 +651,18 @@
 		font-weight: 600;
 	}
 
+	.helper.success {
+		color: #166534; /* green */
+		background: rgba(16, 185, 129, 0.06);
+		padding: 6px 8px;
+		border-radius: 8px;
+	}
+
+	.helper.info {
+		color: #0f172a;
+		opacity: 0.9;
+	}
+
 	.actions {
 		display: flex;
 		align-items: center;
@@ -555,6 +682,13 @@
 		transition:
 			transform 0.1s ease,
 			box-shadow 0.15s ease;
+	}
+
+	.submit.disabled,
+	.submit[aria-disabled="true"] {
+		opacity: 0.5;
+		cursor: not-allowed;
+		box-shadow: none;
 	}
 
 	.submit:hover {
@@ -595,6 +729,30 @@
 		display: flex;
 		justify-content: space-between;
 		gap: 8px;
+		align-items: center;
+	}
+
+	/* allow the title/meta area to shrink and truncate so action buttons stay inside */
+	.review header > div:first-child {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	.review h3 {
+		margin: 0;
+		font-size: 17px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.meta {
+		margin: 3px 0 0;
+		color: #5f5f6b;
+		font-size: 13px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.review h3 {
@@ -612,6 +770,7 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
+		flex-shrink: 0; /* keep the score/buttons from shrinking */
 	}
 
 	.stars-inline {
@@ -647,27 +806,82 @@
 		border: 1px solid #e2e2ec;
 	}
 
-	.auth-note {
-		margin-top: 6px;
-		padding: 12px 14px;
-		border: 1px dashed #b7b7c7;
-		border-radius: 12px;
-		background: #fffdf7;
-	}
-
-	.auth-note h3 {
-		margin: 0 0 6px;
-	}
-
-	.links {
+	.location-row {
 		display: flex;
+		align-items: center;
 		gap: 12px;
+		width: 100%;
 	}
 
-	.links a {
-		color: #4f378b;
+	.action-buttons {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-left: auto;
+	}
+
+	.location-label {
+		font-size: 18px;
 		font-weight: 700;
-		text-decoration: none;
+		color: white;
+		background: rgba(255,255,255,0.06);
+		padding: 6px 10px;
+		border-radius: 10px;
+		max-width: 260px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.favorite {
+		background: transparent;
+		border: 1px solid #d6d6de;
+		color: #4f378b;
+		padding: 12px 14px;
+		border-radius: 14px;
+		font-weight: 800;
+		font-size: 20px;
+		cursor: pointer;
+		transition: background 0.12s ease, color 0.12s ease, transform 0.08s ease;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 56px;
+		height: 56px;
+	}
+
+	.favorite:hover {
+		transform: translateY(-2px) scale(1.02);
+	}
+
+	.favorite[aria-pressed="true"] {
+		background: #c62828;
+		color: white;
+		border-color: #c62828;
+		box-shadow: 0 8px 20px rgba(198, 40, 40, 0.18);
+	}
+
+	.go {
+		background: linear-gradient(135deg, #1e9b4a, #2ecc71);
+		color: white;
+		border: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		height: 56px;
+		min-width: 56px;
+		padding: 0 18px;
+		border-radius: 14px;
+		font-weight: 800;
+		font-size: 16px;
+		cursor: pointer;
+		box-shadow: 0 10px 20px rgba(46, 204, 113, 0.18);
+		transition: transform 0.08s ease, box-shadow 0.12s ease;
+	}
+
+	.go:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 14px 28px rgba(46, 204, 113, 0.22);
 	}
 
 	@media (max-width: 640px) {
@@ -681,5 +895,37 @@
 			flex-direction: column;
 			align-items: flex-start;
 		}
+	}
+
+	.selection-overlay {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(255, 255, 255, 0.82);
+		backdrop-filter: blur(4px) saturate(90%);
+		z-index: 40;
+	}
+
+	.overlay-card {
+		background: white;
+		padding: 22px;
+		border-radius: 12px;
+		box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+		text-align: center;
+		max-width: 420px;
+	}
+
+	.overlay-card p {
+		margin: 0 0 12px 0;
+		font-weight: 700;
+		color: #222;
+	}
+
+	.overlay-actions {
+		display: flex;
+		justify-content: center;
+		gap: 10px;
 	}
 </style>
