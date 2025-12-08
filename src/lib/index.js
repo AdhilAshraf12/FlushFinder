@@ -6,7 +6,7 @@ const seedReviews = [
 			id: 1,
 			title: 'Clean and bright',
 			body: 'Easy to find and spotless. Soap and paper towels were stocked.',
-			rating: 5,
+			ratings: 5,
 			author: 'jess.m',
 			time: '2h ago',
 			status: {
@@ -18,7 +18,7 @@ const seedReviews = [
 		{	id: 2,
 			title: 'Lineup at lunch',
 			body: 'Only two stalls so it backs up around noon, but still usable.',
-			rating: 3,
+			ratings: 3,
 			author: 'kai.lee',
 			time: '5h ago',
 			status: {
@@ -30,7 +30,7 @@ const seedReviews = [
 		{	id: 3,
 			title: 'Closed earlier',
 			body: 'Cleaning sign was up around 8pm. Come back later.',
-			rating: 2,
+			ratings: 2,
 			author: 'rohan',
 			time: 'Yesterday',
 			status: {
@@ -44,11 +44,11 @@ const seedReviews = [
 
 export const sharedReviews = writable([...seedReviews]);
 
-export const rating = derived(sharedReviews, $sharedReviews => {
+export const ratings = derived(sharedReviews, $sharedReviews => {
     if ($sharedReviews.length === 0) return 0;
     let total = 0;
     for (const review of $sharedReviews) {
-        total += review.rating;
+        total += review.ratings;
     }
     return total / $sharedReviews.length;
 });

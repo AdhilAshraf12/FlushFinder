@@ -2,7 +2,7 @@
 	import { userInfo } from '$lib/userInfoStore';
 	import { goto } from '$app/navigation';
 	import mapImage from '$lib/assets/mapsimage.png';
-	import { sharedReviews,ratings } from '$lib';
+	import { sharedReviews, ratings } from '$lib';
 	const STAR_FILLED = '\u2605';
 	const STAR_EMPTY = '\u2606';
 
@@ -351,18 +351,9 @@
 <header>
   <div style="display: flex; align-items: center; gap: 8px;">
     <h2>{loc.name}</h2>
-							<div><span class="stars-inline">{STAR_FILLED.repeat(Math.round($rating))}</span></div>
-    <div style="display: flex; gap: 2px;">
-      {#each [1,2,3,4,5] as star}
-        <span
-          style="
-            font-size: 18px;
-            color: {star <= loc.rating ? 'gold' : 'transparent'};
-            -webkit-text-stroke: 1px gold;
-          "
-        >★</span>
-      {/each}
-    </div>
+							<div><span class="stars-inline">{STAR_FILLED.repeat(Math.round($ratings))}</span></div>
+
+    
   </div>
   <p class="meta">{loc.distance} km / {loc.time}</p>
 </header>
@@ -375,7 +366,7 @@
 						</div>
 					</div>
 					<div class="card-actions">
-						<a class="reviews-link" href={`/inapp/review?name=${encodeURIComponent(loc.name)}&link=${encodeURIComponent(loc.link)}`} onclick={(e) => e.stopPropagation()}>ViewReviews</a>
+						<a class="reviews-link" href={`/inapp/review?name=${encodeURIComponent(loc.name)}&link=${encodeURIComponent(loc.link)}`} onclick={(e) => e.stopPropagation()}>View Reviews</a>
 						<a class="go" href={loc.link} onclick={(e) => e.stopPropagation()}>Go</a>
 					</div>
 				</article>
@@ -387,13 +378,14 @@
 
 
 <style>
+
+	@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 	.stars-inline {
 		color: #f7b500;
 		font-size: 20px;
 		letter-spacing: 1px;
 	}
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 /* =================== Hero / Page =================== */
 :global(body) {
 	font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
