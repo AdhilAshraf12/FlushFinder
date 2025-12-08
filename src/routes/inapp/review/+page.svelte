@@ -269,7 +269,15 @@ function isGuest() {
 		</div>
 	</header>
 
-			
+	{#if !locationSelected}
+		<div class="select-alert">
+			<div>
+				<p class="eyebrow">Warning</p>
+				<p class="alert-copy">Please select a bathroom first before you are able to leave a review.</p>
+			</div>
+			<button class="submit" type="button" onclick={() => goto('/inapp/find')}>Select a bathroom</button>
+		</div>
+	{/if}
 
 	<div class="grid">
 		<section class="card">
@@ -554,6 +562,24 @@ function isGuest() {
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
+	}
+
+	.select-alert {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 12px;
+		padding: 14px 16px;
+		background: #fff8e6;
+		border: 1px solid #f4d35e;
+		border-radius: 12px;
+		box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+	}
+
+	.alert-copy {
+		margin: 2px 0 0;
+		color: #4a4a4a;
+		font-weight: 600;
 	}
 
 	.section-head h2 {
