@@ -1,8 +1,7 @@
 <script>
 	import { userInfo } from '$lib/userInfoStore';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { browser } from '$app/environment';
+	import { sharedReviews } from '$lib';
 
 	const availabilityOptions = ['Open now', 'Busy but open', 'Closed for cleaning'];
 	const conditionOptions = ['Sparkling clean', 'Usable', 'Needs attention'];
@@ -52,18 +51,7 @@
 		}
 	];
 
-	// Reviews stored per-location keyed by location name. Seed the example location.
-	let reviewsByLocation = $state({ 'Deville Coffee Washroom': seedReviews });
-	// load persisted reviews if available
-	if (browser) {
-		try {
-			const raw = sessionStorage.getItem('reviewsByLocation');
-			if (raw) reviewsByLocation = JSON.parse(raw);
-		} catch (e) {
-			// ignore parse errors
-		}
-	}
-	let currentReviews = $state([]);
+	let reviews = $state(seedReviews);
 	let rating = $state(0);
 	let title = $state('');
 	let review = $state('');
@@ -74,43 +62,11 @@
 	let currentAuthor = $derived(userInfo?.getUsername ? userInfo.getUsername() : 'You');
 	let editingId = $state(null);
 
-	let locationName = $state('Selected location');
-	let locationLink = $state('/inapp/find');
-
 	$effect(() => {
-		const n = $page.url.searchParams.get('name');
-		const l = $page.url.searchParams.get('link');
-		locationName = n ?? 'Selected location';
-		locationLink = l ?? '/inapp/find';
-	});
-
-	
-	$effect(() => {
-		currentReviews = reviewsByLocation[locationName] ?? [];
-	});
-
-	
-	$effect(() => {
-		if (!browser) return;
-		try {
-			sessionStorage.setItem('reviewsByLocation', JSON.stringify(reviewsByLocation));
-		} catch (e) {
-			
+		if (userInfo?.getEmail && userInfo.getEmail() == '') {
+			goto('/');
 		}
 	});
-
-function scrollToReviews() {
-    if (!browser) return;
-    const el = document.getElementById('reviews-section');
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
-}
-
-function isGuest() {
-	const e = userInfo.getEmail();
-	return !e || e === 'test@mail.com';
-}
-
-	
 
 	function toggleAccess(option) {
 		if (accessibility.includes(option)) {
@@ -134,11 +90,8 @@ function isGuest() {
 			return;
 		}
 
-		// Ensure an array exists for this location
-		const list = reviewsByLocation[locationName] ?? [];
-
 		if (editingId) {
-			reviewsByLocation[locationName] = list.map((item) =>
+			sharedReviews.update(list => list.map((item) =>
 				item.id === editingId
 					? {
 							...item,
@@ -148,7 +101,7 @@ function isGuest() {
 							status: { availability, condition, accessibility }
 						}
 					: item
-			);
+			));
 			helperMessage = 'Your review was updated.';
 		} else {
 			const newReview = {
@@ -161,7 +114,7 @@ function isGuest() {
 				status: { availability, condition, accessibility }
 			};
 
-			reviewsByLocation[locationName] = [newReview, ...list].slice(0, 20);
+			sharedReviews.update(list => [newReview, ...list].slice(0, 6));
 			helperMessage = 'Thanks for sharing. Your review is live.';
 		}
 
@@ -175,8 +128,7 @@ function isGuest() {
 	}
 
 	function deleteReview(id) {
-		const list = reviewsByLocation[locationName] ?? [];
-		reviewsByLocation[locationName] = list.filter((review) => review.id !== id);
+		sharedReviews.update(list => list.filter((review) => review.id !== id));
 		helperMessage = 'Your review was deleted.';
 	}
 
@@ -215,10 +167,6 @@ function isGuest() {
 			<p class="eyebrow">Share your experience</p>
 			<h1>Rate this bathroom</h1>
 			<p class="lede">Leave a fast status check, pick a rating, and add a short headline.</p>
-		</div>
-		<div class="location-row">
-			<h2 class="location-name">{locationName}</h2>
-			<button class="go" type="button" onclick={() => goto(locationLink)}>GO</button>
 		</div>
 		<div class="pill">Recent reviews</div>
 	</header>
@@ -288,15 +236,15 @@ function isGuest() {
 				{/each}
 			</div>
 		</section>
-		{#if userInfo.getEmail() !== 'test@mail.com'}
-			<section class="card">
-				<div class="section-head">
-					<div>
-						<p class="eyebrow">Your review</p>
-						<h2>Rate & write</h2>
-						<p class="hint">Pick a star rating and add a title plus a quick note.</p>
-					</div>
+
+		<section class="card">
+			<div class="section-head">
+				<div>
+					<p class="eyebrow">Your review</p>
+					<h2>Rate & write</h2>
+					<p class="hint">Pick a star rating and add a title plus a quick note.</p>
 				</div>
+			</div>
 
 			<div class="stars" aria-label="Star rating from one to five">
 				{#each [1, 2, 3, 4, 5] as star}
@@ -341,7 +289,7 @@ function isGuest() {
 			{/if}
 
 			<div class="actions">
-				<button class="submit" type="button" onclick={submitReview} disabled={isGuest()}>
+				<button class="submit" type="button" onclick={submitReview}>
 					{editingId ? 'Update review' : 'Submit review'}
 				</button>
 				{#if editingId}
@@ -349,17 +297,8 @@ function isGuest() {
 				{/if}
 			</div>
 		</section>
-		{:else}
-		<section class="card guest-banner">
-			<p>You are continuing as a guest. Guests cannot post reviews.</p>
-			<div class="guest-actions">
-				<button type="button" class="ghost" onclick={scrollToReviews}>Continue reading</button>
-				<button type="button" class="submit" onclick={() => goto('/')}>Log in to post</button>
-			</div>
-		</section>
-		{/if}
 
-		<section id="reviews-section" class="card reviews">
+		<section class="card reviews">
 			<div class="section-head">
 				<div>
 					<p class="eyebrow">Feed</p>
@@ -367,10 +306,10 @@ function isGuest() {
 				</div>
 			</div>
 
-			{#if currentReviews.length === 0}
+			{#if $sharedReviews.length === 0}
 				<p class="hint">No reviews yet. Be the first to share your experience.</p>
 			{:else}
-				{#each currentReviews as item (item.id)}
+				{#each $sharedReviews as item (item.id)}
 					<article class="review">
 						<header>
 							<div>
@@ -421,7 +360,7 @@ function isGuest() {
 		</section>
 	</div>
 
-	{#if isGuest()}
+	{#if !userInfo.getEmail()}
 		<div class="auth-note">
 			<h3>You need to be signed in to post a review.</h3>
 			<div class="links">

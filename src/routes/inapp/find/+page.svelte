@@ -2,6 +2,9 @@
 	import { userInfo } from '$lib/userInfoStore';
 	import { goto } from '$app/navigation';
 	import mapImage from '$lib/assets/mapsimage.png';
+	import { sharedReviews,ratings } from '$lib';
+	const STAR_FILLED = '\u2605';
+	const STAR_EMPTY = '\u2606';
 
 	const locations = [
 		{
@@ -109,7 +112,7 @@
 		showFilter = false;
 		// Reset filters
 		distance = 5;
-		rating = 0;
+		//rating = 0;
 		gender = '';
 		accessibilityFilters = [];
 		activeFilter = 'All';
@@ -348,6 +351,7 @@
 <header>
   <div style="display: flex; align-items: center; gap: 8px;">
     <h2>{loc.name}</h2>
+							<div><span class="stars-inline">{STAR_FILLED.repeat(Math.round($rating))}</span></div>
     <div style="display: flex; gap: 2px;">
       {#each [1,2,3,4,5] as star}
         <span
@@ -383,6 +387,11 @@
 
 
 <style>
+	.stars-inline {
+		color: #f7b500;
+		font-size: 20px;
+		letter-spacing: 1px;
+	}
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* =================== Hero / Page =================== */
