@@ -5,11 +5,16 @@
 </script>
 
 <div class="wrapper">
-    <img src={start}/>
+    <img src={start} class = "devillemap"/>
     <button class="back" onclick={() => goto('/inapp/deville')}> &lt; </button>
 </div>
 
 <style>
+    .devillemap {
+        height: 90vh;      /* 70% of viewport height */
+        /* width: ;       scale width proportionally */
+        object-fit: contain;
+    }
     .wrapper{
         position: relative;
         height:100%;
