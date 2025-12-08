@@ -24,6 +24,14 @@ npm start
 | Brock Tomlinson | brock.tomlinson@ucalgary.ca |
 | Rimal Rizvi     | rimal.rizvi@ucalgary.ca     |
 
+
+Important Notes:
+- Go only works for Deville
+- The maps are only place holders, not the final implementaion
+- You can log in with any user info, feel free to use a fake password, you do not have to sign up
+
+
+
 Below is standard sveltekit docs
 
 # sv
